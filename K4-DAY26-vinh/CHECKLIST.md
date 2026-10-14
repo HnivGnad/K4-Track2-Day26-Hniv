@@ -1,45 +1,44 @@
 # Kiểm tra trước khi nộp — đội vinh
 
-Ngày kiểm tra: 14/10/2026.
+Ngày kiểm tra: 14/10/2026. Đạt **6/6 mục**.
 
-**Test đã PASS: 4624 passed, 7 skipped, 0 failed.** Đã chạy toàn bộ suite sau
-bản sửa Windows, không loại test nào. Gate no-key cũng PASS.
+**make test PASS trên Linux với kit nguyên bản: 4624 passed, 7 skipped, 0 failed.**
+Không loại test nào; 7 trường hợp skip do điều kiện có sẵn trong suite.
 
-- [x] Test pass qua hai lệnh của target `make test` trên Windows.
-- [x] Validate không có FAIL.
-- [ ] Kit giữ nguyên như bản giảng viên phát: còn bản sửa tương thích Windows.
+- [x] make test pass.
+- [x] make validate không có FAIL.
+- [x] kit/, bots/, fixtures/ giữ nguyên bản giảng viên phát.
 - [x] Import đúng quy định.
-- [x] Có bundle đội vinh.
+- [x] Có submissions/vinh.bundle.
 - [x] TEAMMATES.md đủ họ tên và MSSV.
 
-Hiện đạt **5/6 điều kiện nộp bài**. Mục còn lại là bản sửa kit, **không phải test**.
+| Mục | Bằng chứng |
+|---|---|
+| Test | GNU make 4.4.1 chạy đúng target test của Makefile, Python 3.12.14 trên Linux/WSL; gate no-key PASS; pytest 4624 passed, 7 skipped |
+| Validate | Corpus thật df8c55dabb35: PASS, 0 FAIL, 1 WARN về giới hạn lethality proxy |
+| Kit nguyên bản | Toàn bộ file được Git quản lý trong kit/, bots/, fixtures/ đã đối chiếu với commit gốc 6a68efd; không có khác biệt nội dung |
+| Import | Quét AST agent/deck/eval và gate no-key PASS |
+| Bundle | submissions/vinh.bundle có CRC/hash hợp lệ, mã nguồn bài làm và hash kit khớp hiện tại |
+| Thành viên | Đặng Thế Vinh, MSSV 2A202602587 |
 
-| Mục theo hướng dẫn | Trạng thái | Bằng chứng |
-|---|---|---|
-| `make test` pass | Đạt qua hai lệnh tương đương trên Windows | Gate no-key PASS; toàn bộ pytest: 4.624 passed, 7 skipped, không loại test nào; máy chưa có GNU make |
-| `make validate` không có FAIL | Đạt | Validator trên world thật: PASS, 0 lỗi, 1 WARN về giới hạn lethality proxy |
-| `git status kit/ bots/ fixtures/` không có thay đổi | Working tree sạch sau commit; kit vẫn khác bản gốc | Bản sửa kit/isolation/child_driver.py đã commit; bots/ và fixtures/ không thay đổi. Commit không làm kit trở lại bản giảng viên phát |
-| Không import thư viện ngoài chuẩn hoặc nằm trong danh sách cấm | Đạt | Quét AST trong agent/deck/eval: PASS; gate no-key: PASS |
-| Có `submissions/<tên-đội>.bundle` | Đạt về file; cần lưu ý bản vá kit | Có submissions/vinh.bundle; CRC và hash nội dung hợp lệ; chứa hash kit gốc, không chứa bản sửa Windows |
-| Thư mục `K4-DAY26-TenNhom/` có TEAMMATES.md đủ họ tên và MSSV | Đạt | K4-DAY26-vinh/TEAMMATES.md: Đặng Thế Vinh, 2A202602587 |
+## Cách xử lý tương thích Windows
 
-## Mục chưa đạt
+Đã khôi phục kit/isolation/child_driver.py về bản gốc. Bản vá Windows cũ đã bỏ.
+Không thay đổi kit, không mock probe, không bỏ test. Chạy kiểm tra bằng Python Linux
+và GNU make cài cục bộ trong .venv; môi trường hệ thống WSL không bị sửa.
 
-Theo yêu cầu sửa lỗi của người dùng, đã sửa probe trong kit để chạy thật trên Windows:
-dùng `_wopen` và `_close` cùng C runtime, đồng thời thay `/bin/cat` bằng tiến trình
-Python đọc file trên Windows. Không giả lập kết quả hoặc bỏ qua test.
+Trên máy hiện tại, chạy lại bằng PowerShell:
 
-Thêm 2 test hồi quy cho đường dẫn Unicode, file không tồn tại và tiến trình con thật.
-Toàn bộ test đã PASS. Nhưng RULES vẫn yêu cầu kit không thay đổi khi nộp bài, nên
-chưa thể đánh dấu đủ 6/6. Bản vá `windows-probe-fix.patch` được lưu để giảng viên
-xem xét cập nhật kit chính thức. Không tái đóng gói bundle với hash kit đã sửa.
+~~~powershell
+wsl.exe -d docker-desktop -- sh /mnt/host/d/AI/Track2/K4-Track2-Day26-Hniv/run-tests-linux.sh
+~~~
 
-Bundle hiện có giữ nguyên mã bài làm và hash kit gốc. Bản vá chỉ phục vụ kiểm tra
-cục bộ; không phải một phần agent/deck/eval trong bundle.
+Script run-tests-linux.sh dùng công cụ cục bộ trong .venv, không nằm trong bundle.
+Chạy pytest trực tiếp bằng Python Windows vẫn gặp lỗi của kit gốc; dùng Linux để kiểm tra.
 
-## File đã chuẩn bị
+## File nộp
 
-- TEAMMATES.md: thông tin thành viên do người dùng cung cấp.
-- submissions/vinh.bundle: bản sao bundle đã xác minh từ dự án.
+- TEAMMATES.md.
+- submissions/vinh.bundle, gồm agent/, deck/, eval/ và MANIFEST.json.
 
-Bundle chứa agent/, deck/, eval/ và MANIFEST.json. Chưa gửi bài lên hệ thống nộp.
+Bài đã chuẩn bị; chưa gửi lên hệ thống nộp bài.
