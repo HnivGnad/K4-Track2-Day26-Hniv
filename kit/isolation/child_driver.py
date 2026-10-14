@@ -166,8 +166,15 @@ def _probe_os_open_read(path: Path) -> dict:
 
 
 def _probe_subprocess_cat(path: Path) -> dict:
+    # Keep a real child-process read on Windows, which has no /bin/cat.
+    command = (
+        [sys.executable, "-c",
+         "import sys; from pathlib import Path; sys.stdout.buffer.write(Path(sys.argv[1]).read_bytes())",
+         str(path)]
+        if sys.platform == "win32" else ["/bin/cat", str(path)]
+    )
     try:
-        cp = subprocess.run(["/bin/cat", str(path)], capture_output=True, timeout=10)
+        cp = subprocess.run(command, capture_output=True, timeout=10)
     except Exception as exc:  # subprocess itself could be denied outright
         return {"denied": True, "detail": f"{type(exc).__name__}: {exc}", "kind": IntegrityKind.PROC_DENIED.value}
     if cp.returncode != 0:
@@ -201,12 +208,24 @@ def _load_libc() -> ctypes.CDLL:
 def _probe_ctypes_open(path: Path) -> dict:
     try:
         libc = _load_libc()
-        libc.open.restype = ctypes.c_int
-        libc.open.argtypes = [ctypes.c_char_p, ctypes.c_int]
-        fd = libc.open(str(path).encode("utf-8"), 0)
+        if sys.platform == "win32":
+            # Microsoft CRT exposes _wopen/_close. Wide paths support Unicode;
+            # the descriptor must be closed by the same CRT that opened it.
+            raw_open, raw_close = libc._wopen, libc._close
+            raw_open.argtypes = [ctypes.c_wchar_p, ctypes.c_int]
+            filename = str(path)
+        else:
+            raw_open, raw_close = libc.open, libc.close
+            raw_open.argtypes = [ctypes.c_char_p, ctypes.c_int]
+            filename = os.fsencode(path)
+        raw_open.restype = ctypes.c_int
+        raw_close.argtypes = [ctypes.c_int]
+        raw_close.restype = ctypes.c_int
+        fd = raw_open(filename, os.O_RDONLY)
         if fd < 0:
             return {"denied": True, "detail": f"fd={fd}", "kind": IntegrityKind.FS_ESCAPE.value}
-        os.close(fd)
+        if raw_close(fd) != 0:
+            raise OSError("raw C runtime close failed")
         return {"denied": False, "detail": f"fd={fd} (opened via raw libc)", "kind": None}
     except OSError as exc:
         return {"denied": True, "detail": f"{type(exc).__name__}: {exc}", "kind": IntegrityKind.FS_ESCAPE.value}

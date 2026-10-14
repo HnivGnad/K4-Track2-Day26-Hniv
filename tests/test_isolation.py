@@ -224,6 +224,25 @@ def test_setup_probe_fixture_creates_named_markers(tmp_path: Path) -> None:
     assert duel_scratch.is_dir()
 
 
+def test_ctypes_probe_opens_unicode_path_and_reports_missing_file(tmp_path: Path) -> None:
+    path = tmp_path / "probe-\u0111\u1eb7ng.txt"
+    path.write_text("readable", encoding="utf-8")
+    for _ in range(3):
+        assert child_driver._probe_ctypes_open(path)["denied"] is False
+    missing = child_driver._probe_ctypes_open(tmp_path / "missing.txt")
+    assert missing["denied"] is True
+    assert missing["kind"] == rpc.IntegrityKind.FS_ESCAPE.value
+
+
+def test_subprocess_probe_reads_in_a_real_child(tmp_path: Path) -> None:
+    path = tmp_path / "probe.txt"
+    path.write_text("child-marker", encoding="utf-8")
+    result = child_driver._probe_subprocess_cat(path)
+    assert result["denied"] is False
+    assert "child-marker" in result["detail"]
+    assert child_driver._probe_subprocess_cat(tmp_path / "missing.txt")["denied"] is True
+
+
 # ---------------------------------------------------------------------------
 # child_driver.py: the RPC serve loop (in-process, io.BytesIO — no subprocess)
 # ---------------------------------------------------------------------------

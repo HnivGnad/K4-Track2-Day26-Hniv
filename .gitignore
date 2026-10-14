@@ -1,9 +1,13 @@
 __pycache__/
 *.pyc
 .venv/
+.python/
+.uv-cache/
 .pytest_cache/
 submissions/*.bundle
 runs/
 kit/world/*/
 !kit/world/*.py
+colosseum-world-*.zip
+colosseum-world-*.zip.sha256
 *.local.json

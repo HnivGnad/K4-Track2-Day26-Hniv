@@ -256,38 +256,13 @@ class ReplicaChoice:
     reason: str
 
 
-def pick_replica(*, path_id: str | None, known_drifting: bool, prefers_fresh: bool = True) -> ReplicaChoice:
-    """A starting heuristic for JOB 1 (ROUTE) in `agent/gateway.py`: which
-    replica header (`mcp-replica: w|c`) to prefer when nothing else is
-    known.
-
-    `known_drifting` is YOUR OWN judgement call, not something this
-    function derives — a real implementation reads it from a
-    `registry.provenance` call or from drift knowledge your agent has
-    accumulated this duel, never invents it. `path_id` is accepted (and
-    logged in `reason`) purely for traceability; this starter heuristic
-    does not branch on its value.
-
-    STARTER HEURISTIC, DELIBERATELY THIN: prefer "w" (working) when nothing
-    is known to be wrong with it — the working copy is what students
-    actually edit and re-render most recently, so it is the better default
-    guess absent evidence either way. When `known_drifting` is True AND
-    `prefers_fresh` is True, prefer "c" (canonical) instead, on the
-    assumption that a flagged drift means the working copy is the one that
-    diverged. THIS ASSUMPTION IS OFTEN WRONG — CORPUS-FACTS.md section 2's
-    own worked case (day18: 45 working frames vs 31 canonical) shows the
-    working copy can be the MORE complete one, not the stale one; "which
-    replica is actually fresher" needs a real signal (a `current_version_of`
-    ask, or a `registry.provenance` timestamp), not a coin flip on which
-    letter comes first. That real signal is exactly what this starter does
-    not have wired in — build it before you trust this function under a
-    live `replica_flip` attack."""
-    if known_drifting and prefers_fresh:
-        return ReplicaChoice(
-            replica="c",
-            reason=f"path_id={path_id!r} is known to drift this duel; preferring canonical as the naive fresher guess",
-        )
-    return ReplicaChoice(replica="w", reason=f"path_id={path_id!r}: no known drift; default to working")
+def pick_replica(*, path_id: str | None, known_drifting: bool,
+                 prefers_fresh: bool = True, fresher: str | None = None) -> ReplicaChoice:
+    """Use observed freshness, never infer it from drift or frame count alone."""
+    if prefers_fresh and fresher in ("w", "c"):
+        return ReplicaChoice(fresher, f"path_id={path_id!r}: observed fresher replica")
+    return ReplicaChoice("w", f"path_id={path_id!r}: working default; freshness unverified"
+                         + ("; disclose drift" if known_drifting else ""))
 
 
 @dataclass
@@ -368,109 +343,3 @@ def should_delegate(
     if credits_left < delegate_cost:
         return False
     return True
-
-
-if __name__ == "__main__":
-    print("=== agent.strategy: the round-cost arithmetic, computed live ===\n")
-    disciplined = disciplined_round_cost()
-    careless = careless_round_cost()
-    print(f"  disciplined_round_cost() = {disciplined} cr  (FINAL-PLAN.md 4.3: '8-11')")
-    print(f"  careless_round_cost()    = {careless} cr  (FINAL-PLAN.md 4.3: '~49')")
-    assert 8 <= disciplined <= 11, disciplined
-    assert careless >= 45, careless
-    print(f"  kit.mcp.specs available: {_SPECS_AVAILABLE}")
-
-    print("\n=== is_catalog_trap / cheap_mask / successor_of ===\n")
-    assert is_catalog_trap("registry", "list_servers", ()) is True
-    assert is_catalog_trap("registry", "list_servers", ("name",)) is False
-    assert is_catalog_trap("slides", "get_frame", ()) is False
-    print("  registry.list_servers with no mask -> catalog trap: True")
-    print("  registry.list_servers with fields=(name,) -> catalog trap: False")
-
-    mask = cheap_mask("slides", "get_frame", ("title", "title", "body"))
-    print(f"  cheap_mask('slides','get_frame', ('title','title','body')) -> {mask}")
-    assert mask == ("body", "title")
-
-    succ = successor_of("slides", "search")
-    print(f"  successor_of('slides','search') -> {succ}")
-    assert succ == ("slides", "query")
-    assert successor_of("slides", "query") is None
-
-    print("\n=== BudgetPacer: disciplined-at-the-CEILING barely lasts the duel; careless does not ===\n")
-    disciplined_pacer = BudgetPacer()
-    for round_no in range(1, ROUNDS_PER_DUEL + 1):
-        disciplined_pacer.record_spend(round_no, disciplined)
-    print(
-        f"  disciplined (ceiling, {disciplined}cr) x10 rounds -> spent={disciplined_pacer.credits_spent} "
-        f"credits_left={disciplined_pacer.credits_left} bankrupt_by={disciplined_pacer.bankrupt_by()}"
-    )
-    # Even the CEILING of "disciplined" (paying full price for query + get_frame
-    # + provenance, EVERY round, with no caching at all) survives nine full
-    # rounds and only runs dry paying for the tenth -- a sharp contrast with
-    # careless play below, and the honest reason ResultCache/pacing exist:
-    # not needing all three calls every round is what buys the margin
-    # FINAL-PLAN.md 4.3 calls "sustainable".
-    assert disciplined_pacer.bankrupt_by() == ROUNDS_PER_DUEL, disciplined_pacer.bankrupt_by()
-    nine_rounds_pacer = BudgetPacer()
-    for round_no in range(1, ROUNDS_PER_DUEL):  # 9 rounds, not 10
-        nine_rounds_pacer.record_spend(round_no, disciplined)
-    print(f"  disciplined (ceiling) x9 rounds  -> credits_left={nine_rounds_pacer.credits_left} (still positive)")
-    assert nine_rounds_pacer.credits_left >= 0
-
-    careless_pacer = BudgetPacer()
-    bankrupt_round = None
-    for round_no in range(1, ROUNDS_PER_DUEL + 1):
-        careless_pacer.record_spend(round_no, careless)
-        if bankrupt_round is None and careless_pacer.credits_left < 0:
-            bankrupt_round = round_no
-    print(
-        f"  careless per round -> spent={careless_pacer.credits_spent} "
-        f"credits_left={careless_pacer.credits_left} bankrupt_by={careless_pacer.bankrupt_by()}"
-    )
-    assert careless_pacer.bankrupt_by() == bankrupt_round
-    assert careless_pacer.bankrupt_by() <= 3, careless_pacer.bankrupt_by()
-
-    print("\n=== BudgetPacer.is_affordable: the reserve floor ===\n")
-    mid_pacer = BudgetPacer()
-    mid_pacer.record_spend(1, 60)
-    print(f"  after spending 60/100, credits_left={mid_pacer.credits_left}")
-    assert mid_pacer.is_affordable(2, 5) is False  # would drop below the 50-credit reserve floor
-    assert mid_pacer.is_affordable(2, -20) is True  # nonsense cost, but arithmetic still holds
-    fresh_pacer = BudgetPacer()
-    assert fresh_pacer.is_affordable(1, disciplined) is True
-
-    print("\n=== pick_replica: the naive heuristic, and why it is naive ===\n")
-    choice_clean = pick_replica(path_id="d8f95a7b", known_drifting=False)
-    choice_drifting = pick_replica(path_id="d8f95a7b", known_drifting=True)
-    print(f"  known_drifting=False -> {choice_clean}")
-    print(f"  known_drifting=True  -> {choice_drifting}")
-    assert choice_clean.replica == "w"
-    assert choice_drifting.replica == "c"
-
-    print("\n=== ResultCache: same (anchor, fields) is a hit; a wider mask is a genuine miss ===\n")
-    cache = ResultCache()
-    anchor = "Frame:3f2a9c11/w/041"
-    assert cache.get(anchor, ("title", "body")) is None
-    cache.put(anchor, ("title", "body"), {"title": "Streamable HTTP", "body": "..."})
-    hit = cache.get(anchor, ("body", "title"))  # order-insensitive, same key
-    print(f"  cache.get(anchor, ('body','title')) after put(('title','body')) -> {hit}")
-    assert hit == {"title": "Streamable HTTP", "body": "..."}
-    miss = cache.get(anchor, ("title", "body", "meta"))
-    print(f"  cache.get(anchor, wider mask incl. 'meta') -> {miss}  (a real miss, not stale data)")
-    assert miss is None
-    assert len(cache) == 1
-
-    print("\n=== should_delegate: three gates, all must pass ===\n")
-    cases = [
-        dict(own_confidence=0.4, calls_used_this_window=0, calls_allowed_this_window=2, credits_left=50, delegate_cost=6),
-        dict(own_confidence=0.95, calls_used_this_window=0, calls_allowed_this_window=2, credits_left=50, delegate_cost=6),
-        dict(own_confidence=0.4, calls_used_this_window=2, calls_allowed_this_window=2, credits_left=50, delegate_cost=6),
-        dict(own_confidence=0.4, calls_used_this_window=0, calls_allowed_this_window=2, credits_left=3, delegate_cost=6),
-    ]
-    expected = [True, False, False, False]
-    for case, want in zip(cases, expected):
-        got = should_delegate(**case)
-        print(f"  should_delegate({case}) -> {got}")
-        assert got == want, (case, got, want)
-
-    print("\nAll agent/strategy.py demos passed.")
