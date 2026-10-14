@@ -1,7 +1,8 @@
 # Báo cáo thực hiện — đội vinh
 
 Ngày 14/10/2026. Đã triển khai gateway phòng thủ, guardrail, bộ bài và prosecutor.
-Không sửa mã nguồn trong kit/, bots/, fixtures/.
+Giữ nguyên bots/ và fixtures/. Theo yêu cầu sửa lỗi Windows, đã sửa
+kit/isolation/child_driver.py; bản vá và ảnh hưởng đến điều kiện nộp được ghi rõ bên dưới.
 
 ## World đã tải và xác minh
 
@@ -16,7 +17,8 @@ Không sửa mã nguồn trong kit/, bots/, fixtures/.
 
 - Deck trên corpus thật: PASS, 0 lỗi, 1 cảnh báo về giới hạn kiểm tra lethality của validator.
 - Gate no-key: PASS, 0 vi phạm.
-- Bộ test sau bản sửa Windows: **4.624 passed, 7 skipped**, không loại test nào.
+- Bộ test chạy lại sau bản sửa Windows: **PASS — 4624 passed, 7 skipped, 0 failed**,
+  không loại test nào. Mục test trong checklist đã được đánh dấu đạt.
   Máy chưa có GNU make; đã chạy đầy đủ hai lệnh của target test bằng Python 3.12.
   Sửa kit/isolation/child_driver.py theo yêu cầu người dùng: `_wopen`/`_close`
   cùng C runtime và tiến trình Python đọc file thay cho `/bin/cat` trên Windows.
@@ -49,8 +51,9 @@ Lệnh kit.submit --team vinh đã thành công.
 
 Tên đội vinh đã được điền. Theo checklist bổ sung, đã tạo
 K4-DAY26-vinh/TEAMMATES.md với 1 thành viên: Đặng Thế Vinh, MSSV 2A202602587.
-Hiện đạt 5/6 mục: test đã PASS, nhưng mục kit không thay đổi chưa đạt sau bản sửa
-Windows. Đã lưu K4-DAY26-vinh/windows-probe-fix.patch để giảng viên xem xét cập nhật
+Hiện đạt 5/6 điều kiện nộp bài: test đã PASS. Working tree sạch sau commit, nhưng
+kit vẫn khác bản giảng viên phát do bản sửa Windows. Đã lưu
+K4-DAY26-vinh/windows-probe-fix.patch để giảng viên xem xét cập nhật
 kit chính thức. Bundle giữ nguyên hash kit gốc; không tái đóng gói với hash kit sửa.
 Các mã learner trong corpus là dữ liệu mẫu của bài lab.
 

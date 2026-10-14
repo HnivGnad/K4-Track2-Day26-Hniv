@@ -1,12 +1,24 @@
 # Kiểm tra trước khi nộp — đội vinh
 
-Ngày kiểm tra: 14/10/2026. Hiện đạt **5/6 mục**.
+Ngày kiểm tra: 14/10/2026.
+
+**Test đã PASS: 4624 passed, 7 skipped, 0 failed.** Đã chạy toàn bộ suite sau
+bản sửa Windows, không loại test nào. Gate no-key cũng PASS.
+
+- [x] Test pass qua hai lệnh của target `make test` trên Windows.
+- [x] Validate không có FAIL.
+- [ ] Kit giữ nguyên như bản giảng viên phát: còn bản sửa tương thích Windows.
+- [x] Import đúng quy định.
+- [x] Có bundle đội vinh.
+- [x] TEAMMATES.md đủ họ tên và MSSV.
+
+Hiện đạt **5/6 điều kiện nộp bài**. Mục còn lại là bản sửa kit, **không phải test**.
 
 | Mục theo hướng dẫn | Trạng thái | Bằng chứng |
 |---|---|---|
 | `make test` pass | Đạt qua hai lệnh tương đương trên Windows | Gate no-key PASS; toàn bộ pytest: 4.624 passed, 7 skipped, không loại test nào; máy chưa có GNU make |
 | `make validate` không có FAIL | Đạt | Validator trên world thật: PASS, 0 lỗi, 1 WARN về giới hạn lethality proxy |
-| `git status kit/ bots/ fixtures/` không có thay đổi | Chưa đạt sau bản sửa Windows | kit/isolation/child_driver.py đã sửa; bots/ và fixtures/ không thay đổi |
+| `git status kit/ bots/ fixtures/` không có thay đổi | Working tree sạch sau commit; kit vẫn khác bản gốc | Bản sửa kit/isolation/child_driver.py đã commit; bots/ và fixtures/ không thay đổi. Commit không làm kit trở lại bản giảng viên phát |
 | Không import thư viện ngoài chuẩn hoặc nằm trong danh sách cấm | Đạt | Quét AST trong agent/deck/eval: PASS; gate no-key: PASS |
 | Có `submissions/<tên-đội>.bundle` | Đạt về file; cần lưu ý bản vá kit | Có submissions/vinh.bundle; CRC và hash nội dung hợp lệ; chứa hash kit gốc, không chứa bản sửa Windows |
 | Thư mục `K4-DAY26-TenNhom/` có TEAMMATES.md đủ họ tên và MSSV | Đạt | K4-DAY26-vinh/TEAMMATES.md: Đặng Thế Vinh, 2A202602587 |
